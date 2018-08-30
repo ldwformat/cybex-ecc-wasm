@@ -1,5 +1,5 @@
 [package]
-name = "cybex_ecc_private"
+name = "cybex_ecc"
 version = "0.1.0"
 authors = ["ldwformat <ldwformat@gmail.com>"]
 
@@ -8,3 +8,4 @@ rust-crypto = "0.2.36"
 secp256k1 = "0.10.0"
 num-bigint = "0.2"
 bs58 = "0.2.1"
+hex_d_hex = "1.0.1"
