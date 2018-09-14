@@ -6,7 +6,7 @@ extern crate secp256k1;
 use self::bigint::BigInt;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-use self::secp256k1::{Message, Secp256k1, SecretKey, Signature as Signer};
+use self::secp256k1::{Message, Secp256k1, SecretKey, Signature as Signer, SignOnly};
 
 #[derive(Clone, Debug)]
 pub struct Signature {
@@ -40,10 +40,9 @@ impl Signature {
     *hex_d_hex::lower_hex(&self.to_buffer())
   }
 
-  fn ecsign(buffer: &[u8], nonce: u8, sk: SecretKey) -> Signer {
+  fn ecsign(buffer: &[u8], nonce: u8, sk: SecretKey, signer: &Secp256k1<SignOnly>) -> Signer {
     let mut buffer_to_sign: Vec<u8> = buffer.iter().map(|&x| x).collect();
     buffer_to_sign.push(nonce);
-    let signer = Secp256k1::signing_only();
     let mut encoder = Sha256::new();
     encoder.input(buffer_to_sign.as_slice());
     let mut to_sign: [u8; 32] = [0; 32];
@@ -69,7 +68,7 @@ impl Signature {
     let mut nonce = 0;
 
     loop {
-      ecsignature = Signature::ecsign(&buffer_sha2, nonce, sk);
+      ecsignature = Signature::ecsign(&buffer_sha2, nonce, sk, &signer);
       ecsignature.normalize_s(&signer);
       der = ecsignature.serialize_der(&signer);
       len_r = der[3];

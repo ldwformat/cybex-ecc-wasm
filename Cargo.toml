@@ -5,7 +5,9 @@ authors = ["ldwformat <ldwformat@gmail.com>"]
 
 [dependencies]
 rust-crypto = "0.2.36"
+num-traits = "0.2"
 secp256k1 = "0.10.0"
 num-bigint = "0.2"
 bs58 = "0.2.1"
 hex_d_hex = "1.0.1"
+num-integer = "0.1.39"

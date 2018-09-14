@@ -1,9 +1,13 @@
 extern crate crypto;
 extern crate hex_d_hex;
+extern crate num_bigint as bigint;
 
 pub mod private_key;
 pub mod public_key;
 pub mod signature;
+// pub mod ecurve;
+// pub mod ecsignature;
+// pub mod ecdsa;
 
 #[cfg(test)]
 mod tests {
@@ -12,6 +16,7 @@ mod tests {
     use super::private_key::PrivateKey;
     use super::public_key::PublicKey;
     use super::signature::Signature;
+    use super::bigint::BigUint as BigInt;
 
     #[test]
     fn sha256() {
@@ -81,6 +86,14 @@ mod tests {
         let result = signature.to_hex();
         println!("Hex: {:?}", result);
         assert_eq!(result, "1f781a091b6bc46449df24dc5120c5c3c2608bf8a08571b6951ef2283239f98ba8310d05d1fc1ad54b0e5f6d96aba1d5c92733377c29891ba791d7c9713bb159bc");
+    }
+
+    #[test]
+    fn bignum_test() {
+        const origin_num: &str = "ff";
+        let bg = BigInt::parse_bytes(origin_num.as_bytes(), 16).unwrap();
+        // bg.add(2);
+        assert_eq!(bg.to_str_radix(10), "255");
     }
 
     // #[test]
