@@ -8,7 +8,7 @@
 // extern crate secp256k1;
 
 // pub fn sign(curve: Secp256k1Curve, hash: &[u8], d: BigInt, nonce: usize) -> ECSignature {
-//   let e = BigInt::from_signed_bytes_le(hash);
+//   let e = BigInt::from_signed_bytes_be(hash);
 //   let n = curve.n;
 //   // let G = curve.G;
 //   // ECSignature{}

@@ -3,10 +3,11 @@ extern crate hex_d_hex;
 extern crate num_bigint as bigint;
 extern crate secp256k1;
 // use std::convert::TryInto;
+use signature::secp256k1::All;
 use self::bigint::BigInt;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-use self::secp256k1::{Message, Secp256k1, SecretKey, Signature as Signer, SignOnly};
+use self::secp256k1::{Message, Secp256k1, SecretKey, SignOnly, Signature as Signer};
 
 #[derive(Clone, Debug)]
 pub struct Signature {
@@ -20,8 +21,8 @@ impl Signature {
     assert_eq!(buf.len(), 65, "Invalid signature length");
     let i = buf[0];
     assert_eq!(i - 27, (i - 27) & 7, "Invalid signature parameter");
-    let r = BigInt::from_signed_bytes_le(&buf[1..33]);
-    let s = BigInt::from_signed_bytes_le(&buf[33..]);
+    let r = BigInt::from_signed_bytes_be(&buf[1..33]);
+    let s = BigInt::from_signed_bytes_be(&buf[33..]);
     Signature { r, s, i }
   }
 
@@ -31,8 +32,8 @@ impl Signature {
 
   pub fn to_buffer(&self) -> Vec<u8> {
     let mut buf = vec![self.i];
-    buf.extend(&self.r.to_signed_bytes_le());
-    buf.extend(&self.s.to_signed_bytes_le());
+    buf.extend(&self.r.to_signed_bytes_be());
+    buf.extend(&self.s.to_signed_bytes_be());
     buf
   }
 
@@ -40,16 +41,44 @@ impl Signature {
     *hex_d_hex::lower_hex(&self.to_buffer())
   }
 
-  fn ecsign(buffer: &[u8], nonce: u8, sk: SecretKey, signer: &Secp256k1<SignOnly>) -> Signer {
-    let mut buffer_to_sign: Vec<u8> = buffer.iter().map(|&x| x).collect();
-    buffer_to_sign.push(nonce);
-    let mut encoder = Sha256::new();
-    encoder.input(buffer_to_sign.as_slice());
-    let mut to_sign: [u8; 32] = [0; 32];
-    encoder.result(&mut to_sign);
-    println!("Final To Sign: {:x?}", to_sign);
-    let msg = Message::from_slice(&to_sign).unwrap();
-    signer.sign(&msg, &sk)
+  fn ecsign(
+    buffer: &[u8],
+    nonce: u8,
+    sk: &SecretKey,
+    signer: &Secp256k1<All>,
+  ) -> (i32, Signer) {
+    let mut buffer_to_sign: Vec<u8> = buffer.iter().cloned().collect();
+    let mut to_be = [0u8; 32];
+    if nonce > 0 {
+      for _i in 0..nonce {
+        buffer_to_sign.push(0x00);
+      }
+      let mut sha2 = Sha256::new();
+      sha2.input(&buffer_to_sign[..]);
+      sha2.result(&mut to_be);
+      // sha2.reset();
+      // sha2.input(&mut to_be);
+      // sha2.result(&mut to_be);
+    } else {
+      for i in 0..32 {
+        to_be[i] = buffer_to_sign[i];
+      }
+    }
+
+    println!(
+      "Buffer Sha256: {:0x?}, {}, {:0x?}",
+      nonce, to_be.len(), &to_be
+    );
+    let msg = Message::from_slice(&to_be).unwrap();
+    println!(
+      "Buffer Msg: {:0x?}",
+      buffer_to_sign
+    );
+    let sign = signer.sign_recoverable(&msg, &sk);
+    let (i, _) = sign.serialize_compact(&signer);
+    println!("Recovery I: {:?}, {:?}", &i, i.to_i32());
+    let standard_sign = sign.to_standard(&signer);
+    (i.to_i32(), standard_sign)
   }
 
   pub fn sign_buffer(buffer: &[u8], sk: SecretKey) -> Signature {
@@ -57,26 +86,22 @@ impl Signature {
     let mut buffer_sha2 = [0u8; 32];
     encoder.input(&buffer);
     encoder.result(&mut buffer_sha2);
-    let signer = Secp256k1::signing_only();
-    println!("Buffer Sha2: {:x?}", buffer_sha2);
     let mut der: Vec<u8> = Vec::new();
-    let mut ecsignature: Signer;
     let mut len_r;
     let mut len_s;
     let mut i;
-    let mut e = BigInt::from_signed_bytes_le(&buffer_sha2);
     let mut nonce = 0;
 
     loop {
-      ecsignature = Signature::ecsign(&buffer_sha2, nonce, sk, &signer);
-      ecsignature.normalize_s(&signer);
+      let signer = Secp256k1::new();
+      let (_i, mut ecsignature) = Signature::ecsign(&buffer_sha2, nonce, &sk, &signer);
+      // ecsignature.normalize_s(&signer);
       der = ecsignature.serialize_der(&signer);
+      println!("Der: {:0x?}", der);
       len_r = der[3];
       len_s = der[5 + len_r as usize];
-      println!("ESIGN: {:?}", ecsignature);
-      println!("DER: {:?}", der);
       if len_r == 32 && len_s == 32 {
-        i = 0;
+        i = _i as u8;
         i += 4; // compressed
         i += 27; // compact  //  24 or 27 :( forcing odd-y 2nd key candidate)
         break;
@@ -116,11 +141,11 @@ impl Signature {
     if s_len > 1 && sb[0] == 0x00 {
       assert!(sb[1] & 0x80 > 0, "R value excessively padded");
     }
-    println!("S HEX: {:? }", sb);
+    println!("S HEX: {:0x? }", sb);
     assert_eq!(der_buffer.len(), offset, "Invalid DER encoding");
     (
-      BigInt::from_signed_bytes_le(&rb),
-      BigInt::from_signed_bytes_le(&sb),
+      BigInt::from_signed_bytes_be(&rb),
+      BigInt::from_signed_bytes_be(&sb),
     )
   }
 }

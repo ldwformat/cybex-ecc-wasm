@@ -44,7 +44,7 @@ impl Curve {
   }
 
   pub fn p_length(&self) -> usize {
-    ((self.p.to_signed_bytes_le().len() / 8 + 7) / 8)
+    ((self.p.to_signed_bytes_be().len() / 8 + 7) / 8)
   }
 
   pub fn G(&self) -> Point {

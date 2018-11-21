@@ -16,7 +16,7 @@ mod tests {
     use super::private_key::PrivateKey;
     use super::public_key::PublicKey;
     use super::signature::Signature;
-    use super::bigint::BigUint as BigInt;
+    use super::bigint::BigInt;
 
     #[test]
     fn sha256() {
@@ -78,14 +78,22 @@ mod tests {
 
     #[test]
     fn sign_buffer() {
-        let str = "Hereisatestbuffer";
+        let first = "firstteststr";
+        let second = "secondteststr";
+        let third = "thirdteststr";
+        let forth = "forthteststr";
         let seed = "hereisasimpletestseed";
+        let tx = "59e27e3883fc5ec4dbff68855f83961303157df9a64a3ecf49982affd8e8d4907c62134ce2503fb1be5b0100d0070000000000000012950680841e000000000000000000";
+        let tx_buffer = &*hex_d_hex::dhex(tx);
         let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
-        println!("Str to be signed: {:x?}", str.as_bytes());
-        let signature = Signature::sign_buffer(str.as_bytes(), sk);
-        let result = signature.to_hex();
-        println!("Hex: {:?}", result);
-        assert_eq!(result, "1f781a091b6bc46449df24dc5120c5c3c2608bf8a08571b6951ef2283239f98ba8310d05d1fc1ad54b0e5f6d96aba1d5c92733377c29891ba791d7c9713bb159bc");
+        // let signature1 = Signature::sign_buffer(first.as_bytes(), sk).to_hex();
+        let signature2 = Signature::sign_buffer(tx_buffer, sk).to_hex();
+        assert_eq!(signature2, "206ad03fef7a8b599efd69e7181fe4334f642edf547195e8ddfd8b6742206a433e79bc427e59a557c75747f08ba345962b4cb088b7792ff1fbd7cc4c501f1daefe");
+        // let signature3 = Signature::sign_buffer(third.as_bytes(), sk).to_hex();
+        // assert_eq!(signature3, "1f120b8e8af00b06b52dabdee8d06dfc1e972b70ca59ba2e3d1204a1361076d7240141a346941b3c4048e533a6ea01a9423c18c0884519d047f1126f262ec9cd17");
+        // let signature4 = Signature::sign_buffer(forth.as_bytes(), sk).to_hex();
+        // // assert_eq!(signature1, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
+        // assert_eq!(signature4, "203fbfaae09b7b34b9c3c3ac06069699ac7d5c9827389d8edd2730a06e55eebcc93ca400dce3f9d67145a46ccca6db7a0396bcea74385a9e866748c15369425dbf");
     }
 
     #[test]

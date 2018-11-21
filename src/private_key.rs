@@ -19,7 +19,7 @@ pub struct PrivateKey {
 impl PrivateKey {
   pub fn new(d: BigInt) -> PrivateKey {
     let secp = Secp256k1::new();
-    let secret_key = SecretKey::from_slice(&secp, &d.to_signed_bytes_le()).unwrap();
+    let secret_key = SecretKey::from_slice(&secp, &d.to_signed_bytes_be()).unwrap();
     let public_key = PublicKey::from_secret(&secret_key);
     PrivateKey {
       d,
@@ -43,7 +43,7 @@ impl PrivateKey {
     if buffer.len() == 0 {
       return Err("Empty buffer");
     }
-    Ok(PrivateKey::new(BigInt::from_signed_bytes_le(buffer)))
+    Ok(PrivateKey::new(BigInt::from_signed_bytes_be(buffer)))
   }
 
   pub fn to_wif(&self) -> String {
@@ -61,7 +61,7 @@ impl PrivateKey {
   }
 
   pub fn to_buffer(&self) -> Vec<u8> {
-    self.d.to_signed_bytes_le()
+    self.d.to_signed_bytes_be()
   }
 
 

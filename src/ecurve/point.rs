@@ -88,9 +88,9 @@ impl<'a> Point<'a> {
     } else {
       buffer.resize(1 + byte_length * 2, 0);
       buffer[0] = 0x04;
-      &buffer[(1 + byte_length)..].copy_from_slice(&y.to_signed_bytes_le()[..byte_length]);
+      &buffer[(1 + byte_length)..].copy_from_slice(&y.to_signed_bytes_be()[..byte_length]);
     }
-    &buffer[1..].copy_from_slice(&x.to_signed_bytes_le()[..byte_length]);
+    &buffer[1..].copy_from_slice(&x.to_signed_bytes_be()[..byte_length]);
     buffer
   }
 }
