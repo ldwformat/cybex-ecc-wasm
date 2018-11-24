@@ -3,11 +3,11 @@ extern crate crypto;
 extern crate num_bigint as bigint;
 extern crate secp256k1;
 
-use public_key::PublicKey;
 use self::bigint::BigInt;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-use self::secp256k1::{Secp256k1, SecretKey};
+use self::secp256k1::SecretKey;
+use public_key::PublicKey;
 
 #[derive(Clone, Debug)]
 pub struct PrivateKey {
@@ -18,8 +18,8 @@ pub struct PrivateKey {
 
 impl PrivateKey {
   pub fn new(d: BigInt) -> PrivateKey {
-    let secp = Secp256k1::new();
-    let secret_key = SecretKey::from_slice(&secp, &d.to_signed_bytes_be()).unwrap();
+    // let secp = Secp256k1::new();
+    let secret_key = SecretKey::parse_slice(&d.to_signed_bytes_be()).unwrap();
     let public_key = PublicKey::from_secret(&secret_key);
     PrivateKey {
       d,
@@ -63,7 +63,6 @@ impl PrivateKey {
   pub fn to_buffer(&self) -> Vec<u8> {
     self.d.to_signed_bytes_be()
   }
-
 
   // pub fn toPublicKeyPoint(&self)
 }

@@ -11,12 +11,12 @@ pub mod signature;
 
 #[cfg(test)]
 mod tests {
+    use super::bigint::BigInt;
     use super::crypto::digest::Digest;
     use super::crypto::sha2::Sha256;
     use super::private_key::PrivateKey;
     use super::public_key::PublicKey;
     use super::signature::Signature;
-    use super::bigint::BigInt;
 
     #[test]
     fn sha256() {
@@ -78,43 +78,44 @@ mod tests {
 
     #[test]
     fn sign_buffer() {
-        let first = "firstteststr";
-        let second = "secondteststr";
         let third = "thirdteststr";
         let forth = "forthteststr";
         let seed = "hereisasimpletestseed";
         let tx = "59e27e3883fc5ec4dbff68855f83961303157df9a64a3ecf49982affd8e8d4907c62134ce2503fb1be5b0100d0070000000000000012950680841e000000000000000000";
         let tx_buffer = &*hex_d_hex::dhex(tx);
         let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
-        // let signature1 = Signature::sign_buffer(first.as_bytes(), sk).to_hex();
-        let signature2 = Signature::sign_buffer(tx_buffer, sk).to_hex();
-        assert_eq!(signature2, "206ad03fef7a8b599efd69e7181fe4334f642edf547195e8ddfd8b6742206a433e79bc427e59a557c75747f08ba345962b4cb088b7792ff1fbd7cc4c501f1daefe");
-        // let signature3 = Signature::sign_buffer(third.as_bytes(), sk).to_hex();
-        // assert_eq!(signature3, "1f120b8e8af00b06b52dabdee8d06dfc1e972b70ca59ba2e3d1204a1361076d7240141a346941b3c4048e533a6ea01a9423c18c0884519d047f1126f262ec9cd17");
-        // let signature4 = Signature::sign_buffer(forth.as_bytes(), sk).to_hex();
-        // // assert_eq!(signature1, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
-        // assert_eq!(signature4, "203fbfaae09b7b34b9c3c3ac06069699ac7d5c9827389d8edd2730a06e55eebcc93ca400dce3f9d67145a46ccca6db7a0396bcea74385a9e866748c15369425dbf");
+        let signature3 = Signature::sign_buffer(third.as_bytes(), &sk).to_hex();
+        println!(
+            "Third: {}",
+            &*hex_d_hex::lower_hex(&Vec::from(third.as_bytes()))
+        );
+        assert_eq!(signature3, "1f120b8e8af00b06b52dabdee8d06dfc1e972b70ca59ba2e3d1204a1361076d7240141a346941b3c4048e533a6ea01a9423c18c0884519d047f1126f262ec9cd17");
+        let signature4 = Signature::sign_buffer(forth.as_bytes(), &sk).to_hex();
+        println!(
+            "Forth {}",
+            &*hex_d_hex::lower_hex(&Vec::from(forth.as_bytes()))
+        );
+        assert_eq!(signature4, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
     }
 
     #[test]
     fn bignum_test() {
-        const origin_num: &str = "ff";
+        let origin_num: &str = "ff";
         let bg = BigInt::parse_bytes(origin_num.as_bytes(), 16).unwrap();
         // bg.add(2);
         assert_eq!(bg.to_str_radix(10), "255");
     }
 
-    // #[test]
-    // fn sign_from_buffer() {
-    //     let buf = [
-    //         31, 120, 26, 9, 27, 107, 196, 100, 73, 223, 36, 220, 81, 32, 197, 195, 194, 96, 139,
-    //         248, 160, 133, 113, 182, 149, 30, 242, 40, 50, 57, 249, 139, 168, 49, 13, 5, 209, 252,
-    //         26, 213, 75, 14, 95, 109, 150, 171, 161, 213, 201, 39, 51, 55, 124, 41, 137, 27, 167,
-    //         145, 215, 201, 113, 59, 177, 89, 188,
-    //     ];
-    //     let sig = Signature::from_buffer(&buf);
-    //     let res: Vec<u8> = buf.iter().map(|&x| x).collect();
-    //     assert_eq!(sig.to_buffer(), res);
-    //     assert_eq!(1, 2);
-    // }
+    #[test]
+    fn sign_from_buffer() {
+        let buf = [
+            31, 120, 26, 9, 27, 107, 196, 100, 73, 223, 36, 220, 81, 32, 197, 195, 194, 96, 139,
+            248, 160, 133, 113, 182, 149, 30, 242, 40, 50, 57, 249, 139, 168, 49, 13, 5, 209, 252,
+            26, 213, 75, 14, 95, 109, 150, 171, 161, 213, 201, 39, 51, 55, 124, 41, 137, 27, 167,
+            145, 215, 201, 113, 59, 177, 89, 188,
+        ];
+        let sig = Signature::from_buffer(&buf);
+        let res: Vec<u8> = buf.iter().map(|&x| x).collect();
+        assert_eq!(sig.to_buffer(), res);
+    }
 }

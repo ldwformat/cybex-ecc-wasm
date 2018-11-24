@@ -3,11 +3,10 @@ extern crate hex_d_hex;
 extern crate num_bigint as bigint;
 extern crate secp256k1;
 // use std::convert::TryInto;
-use signature::secp256k1::All;
 use self::bigint::BigInt;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-use self::secp256k1::{Message, Secp256k1, SecretKey, SignOnly, Signature as Signer};
+use self::secp256k1::{sign, Message, RecoveryId, SecretKey, Signature as Signer};
 
 #[derive(Clone, Debug)]
 pub struct Signature {
@@ -41,12 +40,7 @@ impl Signature {
     *hex_d_hex::lower_hex(&self.to_buffer())
   }
 
-  fn ecsign(
-    buffer: &[u8],
-    nonce: u8,
-    sk: &SecretKey,
-    signer: &Secp256k1<All>,
-  ) -> (i32, Signer) {
+  fn ecsign(buffer: &[u8], nonce: u8, sk: &SecretKey) -> (Signer, RecoveryId) {
     let mut buffer_to_sign: Vec<u8> = buffer.iter().cloned().collect();
     let mut to_be = [0u8; 32];
     if nonce > 0 {
@@ -56,9 +50,9 @@ impl Signature {
       let mut sha2 = Sha256::new();
       sha2.input(&buffer_to_sign[..]);
       sha2.result(&mut to_be);
-      // sha2.reset();
-      // sha2.input(&mut to_be);
-      // sha2.result(&mut to_be);
+    // sha2.reset();
+    // sha2.input(&mut to_be);
+    // sha2.result(&mut to_be);
     } else {
       for i in 0..32 {
         to_be[i] = buffer_to_sign[i];
@@ -67,21 +61,16 @@ impl Signature {
 
     println!(
       "Buffer Sha256: {:0x?}, {}, {:0x?}",
-      nonce, to_be.len(), &to_be
+      nonce,
+      to_be.len(),
+      &to_be
     );
-    let msg = Message::from_slice(&to_be).unwrap();
-    println!(
-      "Buffer Msg: {:0x?}",
-      buffer_to_sign
-    );
-    let sign = signer.sign_recoverable(&msg, &sk);
-    let (i, _) = sign.serialize_compact(&signer);
-    println!("Recovery I: {:?}, {:?}", &i, i.to_i32());
-    let standard_sign = sign.to_standard(&signer);
-    (i.to_i32(), standard_sign)
+    let msg = Message::parse_slice(&to_be).unwrap();
+    println!("Buffer Msg: {:0x?}", buffer_to_sign);
+    sign(&msg, &sk).unwrap()
   }
 
-  pub fn sign_buffer(buffer: &[u8], sk: SecretKey) -> Signature {
+  pub fn sign_buffer(buffer: &[u8], sk: &SecretKey) -> Signature {
     let mut encoder = Sha256::new();
     let mut buffer_sha2 = [0u8; 32];
     encoder.input(&buffer);
@@ -91,24 +80,28 @@ impl Signature {
     let mut len_s;
     let mut i;
     let mut nonce = 0;
-
-    loop {
-      let signer = Secp256k1::new();
-      let (_i, mut ecsignature) = Signature::ecsign(&buffer_sha2, nonce, &sk, &signer);
-      // ecsignature.normalize_s(&signer);
-      der = ecsignature.serialize_der(&signer);
+    let mut ecsignature: Signer;
+    // loop {
+      let (_ecsignature, _i) = Signature::ecsign(&buffer_sha2, nonce, &sk);
+      ecsignature = _ecsignature;
+      der = Vec::new();
+      der.extend_from_slice(ecsignature.serialize_der().as_ref());
       println!("Der: {:0x?}", der);
       len_r = der[3];
       len_s = der[5 + len_r as usize];
-      if len_r == 32 && len_s == 32 {
-        i = _i as u8;
+      // if len_r == 32 && len_s == 32 {
+        i = _i.into();
         i += 4; // compressed
         i += 27; // compact  //  24 or 27 :( forcing odd-y 2nd key candidate)
-        break;
-      }
+        // break;
+      // }
       nonce = nonce + 1;
-    }
-    let (r, s) = Signature::decode_der(der);
+    // }
+    let (r, s) = (
+      BigInt::from_signed_bytes_be(&ecsignature.r.b32()),
+      BigInt::from_signed_bytes_be(&ecsignature.s.b32()),
+    );
+    // let (r, s) = Signature::decode_der(der);
 
     Signature { r, s, i }
   }
