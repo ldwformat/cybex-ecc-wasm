@@ -1,33 +1,49 @@
-extern crate crypto;
+extern crate bigint;
+extern crate cfg_if;
 extern crate hex_d_hex;
-extern crate num_bigint as bigint;
+extern crate sha2;
+extern crate wasm_bindgen;
+
+use cfg_if::cfg_if;
+use wasm_bindgen::prelude::*;
 
 pub mod private_key;
 pub mod public_key;
 pub mod signature;
-// pub mod ecurve;
-// pub mod ecsignature;
-// pub mod ecdsa;
+
+#[wasm_bindgen]
+pub struct Ecc {
+    private_key: private_key::PrivateKey,
+}
+#[wasm_bindgen]
+impl Ecc {
+    pub fn new(seed: &str) -> Ecc {
+        let private_key = private_key::PrivateKey::from_seed(&seed).unwrap();
+        Ecc { private_key }
+    }
+
+    pub fn sign_hex(&self, hex: &str) -> String {
+        signature::Signature::sign_hex(hex, &self.private_key.secret_key).to_hex()
+    }
+}
+
+// #[wasm_bindgen]
 
 #[cfg(test)]
 mod tests {
-    use super::bigint::BigInt;
-    use super::crypto::digest::Digest;
-    use super::crypto::sha2::Sha256;
+    use super::bigint::U256 as BigInt;
     use super::private_key::PrivateKey;
     use super::public_key::PublicKey;
+    use super::sha2::{Digest, Sha256};
     use super::signature::Signature;
 
     #[test]
     fn sha256() {
         let mut hasher = Sha256::new();
-        hasher.input_str("hello world");
+        hasher.input(b"hello world");
         assert_eq!(
-            hasher.result_str(),
-            concat!(
-                "b94d27b9934d3e08a52e52d7da7dabfa",
-                "c484efe37a5380ee9088f7ace2efcde9"
-            )
+            hasher.result().as_slice(),
+            &*hex_d_hex::dhex("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9").as_slice()
         );
     }
 
@@ -35,6 +51,7 @@ mod tests {
     fn private_wif() {
         let seed = "hereisasimpletestseed";
         let key = PrivateKey::from_seed(seed).unwrap();
+        println!("Got key: {:?}", key);
         assert_eq!(
             "5JuuZhBAinVM4i3MmQc9hx7ML9UCwjzSTqJEpcpUa1TnRBmaNqA",
             key.to_wif()
@@ -100,10 +117,10 @@ mod tests {
 
     #[test]
     fn bignum_test() {
-        let origin_num: &str = "ff";
-        let bg = BigInt::parse_bytes(origin_num.as_bytes(), 16).unwrap();
+        let origin_num: &str = "255";
+        let bg = BigInt::from_dec_str(origin_num).unwrap();
         // bg.add(2);
-        assert_eq!(bg.to_str_radix(10), "255");
+        assert_eq!(bg.to_string(), "255");
     }
 
     #[test]

@@ -1,10 +1,11 @@
-extern crate bs58;
-extern crate crypto;
-extern crate num_bigint as bigint;
+extern crate base58;
+extern crate sha2;
+extern crate ripemd160;
+extern crate bigint;
 extern crate secp256k1;
 
-use self::crypto::digest::Digest;
-use self::crypto::ripemd160::Ripemd160;
+use self::base58::ToBase58;
+use self::ripemd160::{Digest, Ripemd160};
 use self::secp256k1::{PublicKey as Q, SecretKey};
 
 #[derive(Clone, Debug)]
@@ -31,9 +32,9 @@ impl PublicKey {
     let mut pub_buf = Vec::from(&self.to_buffer()[..]);
     let mut ripemd160 = Ripemd160::new();
     ripemd160.input(&pub_buf[..]);
-    let mut checksum_result = [0; 20];
-    ripemd160.result(&mut checksum_result);
-    pub_buf.extend(&checksum_result[..4]);
-    bs58::encode(pub_buf).into_string()
+    // let mut checksum_result = [0; 20];
+    // let checksum_result = ripemd160.result()[..20];
+    pub_buf.extend(&ripemd160.result()[..4]);
+    pub_buf.as_slice().to_base58()
   }
 }

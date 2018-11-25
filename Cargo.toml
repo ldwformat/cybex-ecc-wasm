@@ -1,15 +1,32 @@
 [package]
-name = "cybex_ecc"
+name = "cybex-ecc"
 version = "0.1.0"
 authors = ["ldwformat <ldwformat@gmail.com>"]
 
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
 [dependencies]
-rust-crypto = "0.2.36"
-num-traits = "0.2"
 # secp256k1 = "0.10.0"
 libsecp256k1 = "0.2.1"
 # grin_secp256k1zkp = "0.7.1"
-num-bigint = "0.2"
-bs58 = "0.2.1"
+# num-bigint = {version = "0.2"}
+sha2 = "0.8.0"
+ripemd160 = "0.8.0"
+bigint = "4.4.1"
+base58 = "0.1.0"
 hex_d_hex = "1.0.1"
-num-integer = "0.1.39"
+cfg-if = "0.1.2"
+wasm-bindgen = "0.2"
+console_error_panic_hook = { version = "0.1.1", optional = true }
+wee_alloc = { version = "0.4.2", optional = true }
+rustc-serialize = { version = "0.3.24", optional = true }
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
