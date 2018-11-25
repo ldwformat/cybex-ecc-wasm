@@ -1,0 +1,15 @@
+{
+  "name": "cybex-ecc",
+  "collaborators": [
+    "ldwformat <ldwformat@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "cybex_ecc_bg.wasm",
+    "cybex_ecc.js",
+    "cybex_ecc.d.ts"
+  ],
+  "module": "cybex_ecc.js",
+  "types": "cybex_ecc.d.ts",
+  "sideEffects": "false"
+}
