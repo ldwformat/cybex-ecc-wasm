@@ -95,24 +95,27 @@ mod tests {
 
     #[test]
     fn sign_buffer() {
+        let first = "firstteststr";
         let third = "thirdteststr";
         let forth = "forthteststr";
         let seed = "hereisasimpletestseed";
         let tx = "59e27e3883fc5ec4dbff68855f83961303157df9a64a3ecf49982affd8e8d4907c62134ce2503fb1be5b0100d0070000000000000012950680841e000000000000000000";
         let tx_buffer = &*hex_d_hex::dhex(tx);
         let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
+        let signature1 = Signature::sign_buffer(first.as_bytes(), &sk).to_hex();
         let signature3 = Signature::sign_buffer(third.as_bytes(), &sk).to_hex();
         println!(
             "Third: {}",
             &*hex_d_hex::lower_hex(&Vec::from(third.as_bytes()))
         );
+        assert_eq!(signature1, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
         assert_eq!(signature3, "1f120b8e8af00b06b52dabdee8d06dfc1e972b70ca59ba2e3d1204a1361076d7240141a346941b3c4048e533a6ea01a9423c18c0884519d047f1126f262ec9cd17");
         let signature4 = Signature::sign_buffer(forth.as_bytes(), &sk).to_hex();
         println!(
             "Forth {}",
             &*hex_d_hex::lower_hex(&Vec::from(forth.as_bytes()))
         );
-        assert_eq!(signature4, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
+        assert_eq!(signature4, "203fbfaae09b7b34b9c3c3ac06069699ac7d5c9827389d8edd2730a06e55eebcc93ca400dce3f9d67145a46ccca6db7a0396bcea74385a9e866748c15369425dbf");
     }
 
     #[test]

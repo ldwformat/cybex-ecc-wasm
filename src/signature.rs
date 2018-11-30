@@ -2,6 +2,7 @@ extern crate bigint;
 extern crate hex_d_hex;
 extern crate secp256k1;
 extern crate sha2;
+
 // use std::convert::TryInto;
 use self::bigint::U256 as BigInt;
 use self::secp256k1::{sign, Message, RecoveryId, SecretKey, Signature as Signer};
@@ -86,29 +87,42 @@ impl Signature {
     let mut i;
     let mut nonce = 0;
     let mut ecsignature: Signer;
-    // loop {
-    let (_ecsignature, _i) = Signature::ecsign(&buffer_sha2, nonce, &sk);
-    ecsignature = _ecsignature;
-    der = Vec::new();
-    der.extend_from_slice(ecsignature.serialize_der().as_ref());
-    println!("Der: {:0x?}", der);
-    len_r = der[3];
-    len_s = der[5 + len_r as usize];
-    // if len_r == 32 && len_s == 32 {
-    i = _i.into();
-    i += 4; // compressed
-    i += 27; // compact  //  24 or 27 :( forcing odd-y 2nd key candidate)
-             // break;
-             // }
-    nonce = nonce + 1;
-    // }
-    let (r, s) = (
-      BigInt::from(&ecsignature.r.b32()[..]),
-      BigInt::from(&ecsignature.s.b32()[..]),
+    loop {
+      let (_ecsignature, _i) = Signature::ecsign(&buffer_sha2, nonce, &sk);
+      ecsignature = _ecsignature;
+      der = Vec::new();
+      der.extend_from_slice(ecsignature.serialize_der().as_ref());
+      println!("Der: {:0x?}", der);
+      len_r = der[3];
+      len_s = der[5 + len_r as usize];
+      if len_r == 32 && len_s == 32 {
+        i = _i.into();
+        i += 4; // compressed
+        i += 27; // compact  //  24 or 27 :( forcing odd-y 2nd key candidate)
+        break;
+      }
+      nonce = nonce + 1;
+    }
+    let (r, mut s) = (
+      ecsignature.r,
+      ecsignature.s
     );
+    // let (r, mut s) = (
+    //   BigInt::from(&ecsignature.r.b32()[..]),
+    //   BigInt::from(&ecsignature.s.b32()[..]),
+    // );
+
+    // let max_s = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+    // let n = BigInt::from(&*hex_d_hex::dhex(max_s).as_slice());
+    // if n <= s {
+    //   s = BigInt::from(&*hex_d_hex::dhex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141").as_slice()) - s;
+    // }
+    if s.is_high() {
+      s = s.neg();
+    }
     // let (r, s) = Signature::decode_der(der);
 
-    Signature { r, s, i }
+    Signature { r: BigInt::from(&r.b32()[..]), s: BigInt::from(&s.b32()[..]), i }
   }
 
   pub fn sign_hex(hex: &str, sk: &SecretKey) -> Signature {
