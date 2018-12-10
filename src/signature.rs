@@ -1,8 +1,14 @@
+#![no_std]
 extern crate bigint;
 extern crate hex_d_hex;
+
 extern crate secp256k1;
 extern crate sha2;
+use ecdsa;
+// #[macro_use]
+// extern crate arrayref;
 
+//
 // use std::convert::TryInto;
 use self::bigint::U256 as BigInt;
 use self::secp256k1::{sign, Message, RecoveryId, SecretKey, Signature as Signer};
@@ -44,35 +50,23 @@ impl Signature {
     *hex_d_hex::lower_hex(&self.to_buffer())
   }
 
-  fn ecsign(buffer: &[u8], nonce: u8, sk: &SecretKey) -> (Signer, RecoveryId) {
-    let mut buffer_to_sign: Vec<u8> = buffer.iter().cloned().collect();
+  fn ecsign(buffer: &[u8], sk: &SecretKey, counter: &u8) -> (Signer, RecoveryId) {
     let mut to_be = [0u8; 32];
-    if nonce > 0 {
-      for _i in 0..nonce {
-        buffer_to_sign.push(0x00);
-      }
-      let mut sha2 = Sha256::new();
-      sha2.input(&buffer_to_sign[..]);
-      // sha2.result(&mut to_be);
-      to_be.copy_from_slice(sha2.result().as_slice());
-    // sha2.reset();
-    // sha2.input(&mut to_be);
-    // sha2.result(&mut to_be);
-    } else {
-      for i in 0..32 {
-        to_be[i] = buffer_to_sign[i];
-      }
-    }
+    to_be.copy_from_slice(buffer);
+    let msg = Message::parse(&to_be);
+    println!("Buffer Sha256: {:0x?}", &to_be);
+    // sign(&msg, &sk).unwrap()
+    ecdsa::sign_new(&msg, &sk, counter).unwrap()
+  }
 
-    println!(
-      "Buffer Sha256: {:0x?}, {}, {:0x?}",
-      nonce,
-      to_be.len(),
-      &to_be
-    );
-    let msg = Message::parse_slice(&to_be).unwrap();
-    println!("Buffer Msg: {:0x?}", buffer_to_sign);
-    sign(&msg, &sk).unwrap()
+  pub fn is_canonical(sig: Vec<u8>) -> bool {
+    let sig = sig.as_slice();
+    println!("{:?}", sig);
+    // true
+    !((sig[1] & 0x80) != 0)
+      && !(sig[1] == 0 && !((sig[2] & 0x80) != 0))
+      && !((sig[33] & 0x80) != 0)
+      && !(sig[33] == 0 && !((sig[34] & 0x80) != 0))
   }
 
   pub fn sign_buffer(buffer: &[u8], sk: &SecretKey) -> Signature {
@@ -80,49 +74,32 @@ impl Signature {
     let mut buffer_sha2 = [0u8; 32];
     encoder.input(&buffer);
     // encoder.result(&mut buffer_sha2);
-    buffer_sha2.copy_from_slice(encoder.result().as_slice());
-    let mut der: Vec<u8> = Vec::new();
-    let mut len_r;
-    let mut len_s;
-    let mut i;
-    let mut nonce = 0;
-    let mut ecsignature: Signer;
+    buffer_sha2.copy_from_slice(&encoder.result().as_slice());
+    let mut signature: Signature;
+    let mut counter = 0;
     loop {
-      let (_ecsignature, _i) = Signature::ecsign(&buffer_sha2, nonce, &sk);
-      ecsignature = _ecsignature;
-      der = Vec::new();
-      der.extend_from_slice(ecsignature.serialize_der().as_ref());
-      println!("Der: {:0x?}", der);
-      len_r = der[3];
-      len_s = der[5 + len_r as usize];
-      if len_r == 32 && len_s == 32 {
-        i = _i.into();
-        i += 4; // compressed
-        i += 27; // compact  //  24 or 27 :( forcing odd-y 2nd key candidate)
+      let (ecsignature, _i) = Signature::ecsign(&buffer_sha2, &sk, &counter);
+      let mut i = _i.into();
+      i += 27;
+      i += 4;
+      // println!("--------------------------");
+      // println!("Force Low R {:x?}", ecsignature.r.b32());
+      // println!("Force Low S {:x?}", ecsignature.s.b32());
+      // println!("--------------------------");
+      let (r, s) = (ecsignature.r, ecsignature.s);
+
+      let s = Signature {
+        r: BigInt::from(&r.b32()[..]),
+        s: BigInt::from(&s.b32()[..]),
+        i,
+      };
+      if Signature::is_canonical(s.to_buffer()) {
+        signature = s;
         break;
       }
-      nonce = nonce + 1;
+      counter += 1;
     }
-    let (r, mut s) = (
-      ecsignature.r,
-      ecsignature.s
-    );
-    // let (r, mut s) = (
-    //   BigInt::from(&ecsignature.r.b32()[..]),
-    //   BigInt::from(&ecsignature.s.b32()[..]),
-    // );
-
-    // let max_s = "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
-    // let n = BigInt::from(&*hex_d_hex::dhex(max_s).as_slice());
-    // if n <= s {
-    //   s = BigInt::from(&*hex_d_hex::dhex("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141").as_slice()) - s;
-    // }
-    if s.is_high() {
-      s = s.neg();
-    }
-    // let (r, s) = Signature::decode_der(der);
-
-    Signature { r: BigInt::from(&r.b32()[..]), s: BigInt::from(&s.b32()[..]), i }
+    signature
   }
 
   pub fn sign_hex(hex: &str, sk: &SecretKey) -> Signature {

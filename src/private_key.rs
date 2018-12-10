@@ -23,7 +23,7 @@ impl PrivateKey {
     d.to_big_endian(&mut buf);
     let secret_key = SecretKey::parse_slice(&buf).unwrap();
     let public_key = PublicKey::from_secret(&secret_key);
-    println!("D: {:?}", buf);
+    // println!("D: {:?}", buf);
     PrivateKey {
       d,
       secret_key,
@@ -47,7 +47,7 @@ impl PrivateKey {
     if buffer.len() == 0 {
       return Err("Empty buffer");
     }
-    println!("Big: {:?}", BigInt::from(buffer));
+    // println!("Big: {:?}", BigInt::from(buffer));
     Ok(PrivateKey::new(BigInt::from(buffer)))
   }
 

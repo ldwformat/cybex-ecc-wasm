@@ -7,9 +7,13 @@ extern crate wasm_bindgen;
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 
+#[macro_use]
+extern crate arrayref;
+
 pub mod private_key;
 pub mod public_key;
 pub mod signature;
+pub mod ecdsa;
 
 #[wasm_bindgen]
 pub struct Ecc {
@@ -39,11 +43,13 @@ mod tests {
 
     #[test]
     fn sha256() {
+        let str = "hello world";
         let mut hasher = Sha256::new();
-        hasher.input(b"hello world");
+        hasher.input(str.as_bytes());
         assert_eq!(
             hasher.result().as_slice(),
-            &*hex_d_hex::dhex("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9").as_slice()
+            &*hex_d_hex::dhex("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")
+                .as_slice()
         );
     }
 
@@ -95,27 +101,22 @@ mod tests {
 
     #[test]
     fn sign_buffer() {
-        let first = "firstteststr";
-        let third = "thirdteststr";
-        let forth = "forthteststr";
-        let seed = "hereisasimpletestseed";
-        let tx = "59e27e3883fc5ec4dbff68855f83961303157df9a64a3ecf49982affd8e8d4907c62134ce2503fb1be5b0100d0070000000000000012950680841e000000000000000000";
-        let tx_buffer = &*hex_d_hex::dhex(tx);
+        let first = "hereisthefirststringhereisthefirststringhereisthefirststringhereisthefirststring";
+        let second = "hereisthesecondstringhereisthesecondstringhereisthesecondstringhereisthesecondstring";
+        let third = "hereisthethirdstringhereisthethirdstringhereisthethirdstringhereisthethirdstring";
+        let seed = "hereisthesimpleseed";
+        // println!("{:x?}", first.as_bytes());
+        // println!("{:x?}", second.as_bytes());
+        println!("{:x?}", third.as_bytes());
         let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
+
         let signature1 = Signature::sign_buffer(first.as_bytes(), &sk).to_hex();
+        let signature2 = Signature::sign_buffer(second.as_bytes(), &sk).to_hex();
         let signature3 = Signature::sign_buffer(third.as_bytes(), &sk).to_hex();
-        println!(
-            "Third: {}",
-            &*hex_d_hex::lower_hex(&Vec::from(third.as_bytes()))
-        );
-        assert_eq!(signature1, "2055ea9680ce3496f5f68c0e3b8c31964b180df34eb2d343cd2002cd2c22196057241ccffd9c99f62e65d06efc6d885d8e509dff49af5ff650daad2b75ff793b9c");
-        assert_eq!(signature3, "1f120b8e8af00b06b52dabdee8d06dfc1e972b70ca59ba2e3d1204a1361076d7240141a346941b3c4048e533a6ea01a9423c18c0884519d047f1126f262ec9cd17");
-        let signature4 = Signature::sign_buffer(forth.as_bytes(), &sk).to_hex();
-        println!(
-            "Forth {}",
-            &*hex_d_hex::lower_hex(&Vec::from(forth.as_bytes()))
-        );
-        assert_eq!(signature4, "203fbfaae09b7b34b9c3c3ac06069699ac7d5c9827389d8edd2730a06e55eebcc93ca400dce3f9d67145a46ccca6db7a0396bcea74385a9e866748c15369425dbf");
+
+        // assert_eq!(signature1, "2064a9039a0e8c5af90b8d1918451f4303a628ce2887e997a16d61efed928e88a11267f9fc1ecf91fc09c73ed9ca7f542887f08cb54c2efce56e243bebb0833a17");
+        // assert_eq!(signature2, "20752063fafc29b593802687dd6b6b718a932212e7465d044b99a502dcc9fa083a1fd195d943d5002ea8cdc32a3e20e160b8c5af1ec7a6f6a1101193aa68405842");
+        assert_eq!(signature3, "1f2a7505b0a536a43b04213dc5de560aa52423616f3af7735a6e12352e5acd522609ee667c2f3de9cddf1deaf884be6df40ff815cfca106cc67b7b916649c01400");
     }
 
     #[test]

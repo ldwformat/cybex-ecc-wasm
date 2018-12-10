@@ -12,9 +12,13 @@ default = ["console_error_panic_hook"]
 [dependencies]
 # secp256k1 = "0.10.0"
 libsecp256k1 = "0.2.1"
+hmac-drbg = "0.1.0"
+typenum = "1.10.0"
+arrayref = "0.3.5"
+digest = "0.6.0"
 # grin_secp256k1zkp = "0.7.1"
 # num-bigint = {version = "0.2"}
-sha2 = "0.8.0"
+sha2 = "0.6.0"
 ripemd160 = "0.8.0"
 bigint = "4.4.1"
 base58 = "0.1.0"
