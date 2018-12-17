@@ -11,9 +11,7 @@ crate-type = ["cdylib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-aes = "0.3.2"
 aes_frast = "0.1.2"
-# ecdh = "0.0.12"
 libsecp256k1 = "0.2.1"
 hmac-drbg = "0.1.0"
 typenum = "1.10.0"

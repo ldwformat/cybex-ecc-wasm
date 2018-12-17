@@ -8,4 +8,6 @@ static  new(arg0: string): Ecc;
 
  sign_buffer(arg0: Uint8Array): string;
 
+ decode_memo(arg0: string, arg1: BigInt, arg2: string): string;
+
 }

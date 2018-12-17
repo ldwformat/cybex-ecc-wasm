@@ -47,6 +47,10 @@ function passArray8ToWasm(arg) {
     return [ptr, arg.length];
 }
 
+const u32CvtShim = new Uint32Array(2);
+
+const uint64CvtShim = new BigUint64Array(u32CvtShim.buffer);
+
 function freeEcc(ptr) {
 
     wasm.__wbg_ecc_free(ptr);
@@ -127,6 +131,39 @@ export class Ecc {
 
         } finally {
             wasm.__wbindgen_free(ptr0, len0 * 1);
+
+        }
+
+    }
+    /**
+    * @param {string} arg0
+    * @param {BigInt} arg1
+    * @param {string} arg2
+    * @returns {string}
+    */
+    decode_memo(arg0, arg1, arg2) {
+        const [ptr0, len0] = passStringToWasm(arg0);
+
+        uint64CvtShim[0] = arg1;
+        const low1 = u32CvtShim[0];
+        const high1 = u32CvtShim[1];
+
+        const [ptr2, len2] = passStringToWasm(arg2);
+        const retptr = globalArgumentPtr();
+        try {
+            wasm.ecc_decode_memo(retptr, this.ptr, ptr0, len0, low1, high1, ptr2, len2);
+            const mem = getUint32Memory();
+            const rustptr = mem[retptr / 4];
+            const rustlen = mem[retptr / 4 + 1];
+
+            const realRet = getStringFromWasm(rustptr, rustlen).slice();
+            wasm.__wbindgen_free(rustptr, rustlen * 1);
+            return realRet;
+
+
+        } finally {
+            wasm.__wbindgen_free(ptr0, len0 * 1);
+            wasm.__wbindgen_free(ptr2, len2 * 1);
 
         }
 

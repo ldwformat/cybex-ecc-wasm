@@ -1,11 +1,6 @@
 use crate::private_key::PrivateKey;
 use crate::public_key::PublicKey;
 
-use aes::block_cipher_trait::generic_array::GenericArray;
-use aes::block_cipher_trait::BlockCipher;
-use aes::Aes256;
-
-use secp256k1::SharedSecret;
 use sha2::{Digest, Sha256, Sha512};
 
 pub struct Memo {
@@ -23,7 +18,6 @@ impl Memo {
     nonce: u64,
   ) -> Vec<u8> {
     let shared_secret = private_key.get_shared_secret(&public_key);
-    // println!("S: {:0x?}", &shared_secret);
     let seed = format!(
       "{}{}",
       nonce.to_string(),
@@ -52,21 +46,29 @@ impl Memo {
     cipher_text
   }
 
-  pub fn get_message(&self, private_key: &PrivateKey, pub_str: &str) -> String {
+  pub fn decrypt_message(
+    private_key: &PrivateKey,
+    pub_str: &str,
+    nonce: u64,
+    cipher: &str,
+  ) -> String {
     let public_key = PublicKey::from_string(pub_str, None);
-    let shared_secret = SharedSecret::new(&public_key.q, &private_key.secret_key).unwrap();
-    let mut sha = Sha512::new();
-    let mut nonce_plus_secret: Vec<u8> = Vec::new();
-    println!("S: {:?}", shared_secret.as_ref());
-    println!("Nonce: {:?}", self.nonce.to_string());
-    nonce_plus_secret.extend(self.nonce.to_string().as_bytes());
-    nonce_plus_secret.extend(shared_secret.as_ref());
-    sha.input(&nonce_plus_secret);
-    let secret = sha.result()[..].iter().cloned().collect();
-    let message_buf = *hex_d_hex::dhex(&self.message);
-    println!("Msg: {:?}", message_buf);
-    Memo::aes_decrypt(&secret, &message_buf)
-    // Memo::aes_decrypt(&secret, &self.message.as_bytes().iter().cloned().collect())
+    let shared_secret = private_key.get_shared_secret(&public_key);
+    let seed = format!(
+      "{}{}",
+      nonce.to_string(),
+      hex_d_hex::lower_hex(&shared_secret)
+    );
+    let aes = crate::aes::Aes::from_seed(Some(&seed)).unwrap();
+    let mut w_keys: Vec<u32> = vec![0u32; 60];
+    let cipher = *hex_d_hex::dhex(&cipher);
+
+    aes_frast::aes_core::setkey_dec_auto(&aes.key.unwrap(), &mut w_keys);
+    let mut plain = vec![0u8; cipher.len()];
+    aes_frast::aes_with_operation_mode::cbc_dec(&cipher, &mut plain, &w_keys, &aes.iv.unwrap());
+    let mut plain_text = plain[4..].iter().cloned().collect();
+    aes_frast::padding_128bit::de_ansix923_pkcs7(&mut plain_text);
+    (*String::from_utf8_lossy(&plain_text)).to_string()
   }
 
   pub fn aes_decrypt(key_sha512: &Vec<u8>, cipher_text: &Vec<u8>) -> String {

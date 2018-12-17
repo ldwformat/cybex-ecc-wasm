@@ -30,6 +30,10 @@ impl Ecc {
     pub fn sign_buffer(&self, buffer: &[u8]) -> String {
         signature::Signature::sign_buffer(buffer, &self.private_key.secret_key).to_hex()
     }
+
+    pub fn decode_memo(&self, public_key: &str, nonce: u64, cipher: &str) -> String {
+        crate::memo::Memo::decrypt_message(&self.private_key, &public_key, nonce, cipher)
+    }
 }
 
 // #[wasm_bindgen]
@@ -64,7 +68,6 @@ mod tests {
             "5JuuZhBAinVM4i3MmQc9hx7ML9UCwjzSTqJEpcpUa1TnRBmaNqA",
             key.to_wif()
         );
-        // assert_eq!("5KhczK24xDTxQvc5mmK8xnKj4yHtxz6ChWN8rQ1nQHcooJkAbbo", key.to_wif());
     }
 
     #[test]
@@ -87,8 +90,6 @@ mod tests {
         let expected = "7HJSZFyj6Rt6xS3ZLvp6pWMnzzJMyj9pAnDeEmciwmyX2kHhqv";
         assert_eq!(expected, public_key_str);
         let create_test_seed = "create-test20ownerqwer1234qwer1234";
-
-        // assert_eq!("5KhczK24xDTxQvc5mmK8xnKj4yHtxz6ChWN8rQ1nQHcooJkAbbo", key.to_wif());
     }
 
     #[test]
@@ -161,28 +162,44 @@ mod tests {
     // }
     #[test]
     fn decode_memo() {
-        let msg = "dbc904d761774ffe3d5acaed8a50a3fa4cc82a29f5330a02e75e2b71a284a275939d3eea4de1a5adb03041af026e1848db85e663b495a74814b55053baf0d1ed";
+        let msg1 = "hereisa test message!@#$%";
+        let msg2 = "hereis the second2 test message!@#$%";
+        let msg3 = "hereis the third test message!@#$%";
+        let msg4 = "hereis the forth test message!@#$%";
+
         let nonce = 395460150602219;
         let seed = "ldw-formatownerqwer1234qwer1234";
         let pubkey = "7bAJvGEX9xbEEuE4ho8zaac1vppbGYVxhaP4Lebu3DKuo2FTmb";
-        let memo = crate::memo::Memo {
-            from: String::from(""),
-            to: String::from(""),
-            nonce,
-            message: String::from(msg),
-        };
 
-        println!(
-            "Priv: {}",
-            &PrivateKey::from_seed(&seed)
-                .unwrap()
-                .public_key
-                .to_string(Some("CYB"))
+        let memo1 = crate::memo::Memo::decrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &pubkey,
+            nonce,
+            &String::from("8421e6582e1fa5bf0b42b8aaa54a6ee231aa5015f5dbf9ebf79e52582ce17d9f"),
         );
-        assert_eq!(
-            memo.get_message(&PrivateKey::from_seed(&seed).unwrap(), pubkey),
-            ""
+        let memo2 = crate::memo::Memo::decrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &pubkey,
+            nonce,
+            &String::from("37f0592465cc5f241f6e720468eb4eef9301475b33aac3c3fe3d103656704006adaeeef1b65cd8bd37b22d507a100852"),
         );
+        let memo3 = crate::memo::Memo::decrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &pubkey,
+            nonce,
+            &String::from("67a2a29a0ea612a25d7f3bf9895ca5755fc417f0398249f8ae98c274ff1e8ddf649c26fe95bbcf83f844fdc68adcc976"),
+        );
+        let memo4 = crate::memo::Memo::decrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &pubkey,
+            nonce,
+            &String::from("92a0d5cb6d70708f94b55766a77ac7c9cce6c0d63513bd8bcc3a0968c90dbe20c177d3a72f6dd9e4b52549b3f20491a9"),
+        );
+
+        assert_eq!(memo1, msg1);
+        assert_eq!(memo2, msg2);
+        assert_eq!(memo3, msg3);
+        assert_eq!(memo4, msg4);
     }
     #[test]
     fn encode_memo() {
@@ -193,7 +210,7 @@ mod tests {
         let nonce = 395460150602219u64;
         let seed = "ldw-formatownerqwer1234qwer1234";
         let pubkey = "7bAJvGEX9xbEEuE4ho8zaac1vppbGYVxhaP4Lebu3DKuo2FTmb";
-        
+
         let cipher1 = crate::memo::Memo::encrypt_message(
             &PrivateKey::from_seed(&seed).unwrap(),
             &PublicKey::from_string(&pubkey, None),
