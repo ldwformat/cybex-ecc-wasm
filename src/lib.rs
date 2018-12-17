@@ -1,24 +1,21 @@
-extern crate bigint;
-extern crate cfg_if;
-extern crate hex_d_hex;
-extern crate sha2;
-extern crate wasm_bindgen;
-
-use cfg_if::cfg_if;
+// use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 
 #[macro_use]
 extern crate arrayref;
 
+pub mod aes;
+pub mod ecdsa;
+pub mod memo;
 pub mod private_key;
 pub mod public_key;
 pub mod signature;
-pub mod ecdsa;
 
 #[wasm_bindgen]
 pub struct Ecc {
     private_key: private_key::PrivateKey,
 }
+
 #[wasm_bindgen]
 impl Ecc {
     pub fn new(seed: &str) -> Ecc {
@@ -29,17 +26,22 @@ impl Ecc {
     pub fn sign_hex(&self, hex: &str) -> String {
         signature::Signature::sign_hex(hex, &self.private_key.secret_key).to_hex()
     }
+
+    pub fn sign_buffer(&self, buffer: &[u8]) -> String {
+        signature::Signature::sign_buffer(buffer, &self.private_key.secret_key).to_hex()
+    }
 }
 
 // #[wasm_bindgen]
 
 #[cfg(test)]
 mod tests {
-    use super::bigint::U256 as BigInt;
-    use super::private_key::PrivateKey;
-    use super::public_key::PublicKey;
-    use super::sha2::{Digest, Sha256};
-    use super::signature::Signature;
+    // use crate::aes::Aes;
+    use crate::private_key::PrivateKey;
+    use crate::public_key::PublicKey;
+    use crate::signature::Signature;
+    use bigint::U256 as BigInt;
+    use sha2::{Digest, Sha256};
 
     #[test]
     fn sha256() {
@@ -81,11 +83,23 @@ mod tests {
     fn public_string() {
         let seed = "hereisasimpletestseed";
         let key = PrivateKey::from_seed(seed).unwrap().public_key;
-        let public_key_str = key.to_string();
+        let public_key_str = key.to_string(None);
         let expected = "7HJSZFyj6Rt6xS3ZLvp6pWMnzzJMyj9pAnDeEmciwmyX2kHhqv";
         assert_eq!(expected, public_key_str);
+        let create_test_seed = "create-test20ownerqwer1234qwer1234";
+
         // assert_eq!("5KhczK24xDTxQvc5mmK8xnKj4yHtxz6ChWN8rQ1nQHcooJkAbbo", key.to_wif());
     }
+
+    #[test]
+    fn public_string_with_prefix() {
+        let seed = "create-test20ownerqwer1234qwer1234";
+        let key = PrivateKey::from_seed(seed).unwrap().public_key;
+        let public_key_str = key.to_string(Some("CYB"));
+        let expected = "CYB5577JwE4MLsYooqAdWBwV7pam7YmvqUgyGWHvCwPRjw5Y58Rsa";
+        assert_eq!(expected, public_key_str);
+    }
+
     #[test]
     fn public_from_buffer() {
         let buffer = [
@@ -93,30 +107,42 @@ mod tests {
             40, 207, 73, 222, 156, 210, 73, 83, 193, 230, 252, 90, 31, 78,
         ];
         let key = PublicKey::from_buffer(&buffer);
-        let public_key_str = key.to_string();
+        let public_key_str = key.to_string(None);
         let expected = "7HJSZFyj6Rt6xS3ZLvp6pWMnzzJMyj9pAnDeEmciwmyX2kHhqv";
         assert_eq!(expected, public_key_str);
         // assert_eq!("5KhczK24xDTxQvc5mmK8xnKj4yHtxz6ChWN8rQ1nQHcooJkAbbo", key.to_wif());
     }
+    #[test]
+    fn public_from_str() {
+        let buffer = [
+            3, 59, 48, 118, 96, 136, 182, 162, 78, 173, 168, 43, 207, 202, 177, 194, 16, 34, 121,
+            40, 207, 73, 222, 156, 210, 73, 83, 193, 230, 252, 90, 31, 78,
+        ];
+        let expected = "CYB7HJSZFyj6Rt6xS3ZLvp6pWMnzzJMyj9pAnDeEmciwmyX2kHhqv";
+        let key = PublicKey::from_string(&expected, Some("CYB"));
+        let public_key_str = key.to_string(Some("CYB"));
+        assert_eq!(public_key_str, expected);
+        assert_eq!(buffer[..], key.to_buffer()[..]);
+    }
 
     #[test]
     fn sign_buffer() {
-        let first = "hereisthefirststringhereisthefirststringhereisthefirststringhereisthefirststring";
-        let second = "hereisthesecondstringhereisthesecondstringhereisthesecondstringhereisthesecondstring";
-        let third = "hereisthethirdstringhereisthethirdstringhereisthethirdstringhereisthethirdstring";
+        let first =
+            "hereisthefirststringhereisthefirststringhereisthefirststringhereisthefirststring";
+        let second =
+            "hereisthesecondstringhereisthesecondstringhereisthesecondstringhereisthesecondstring";
+        let third =
+            "hereisthethirdstringhereisthethirdstringhereisthethirdstringhereisthethirdstring";
         let seed = "hereisthesimpleseed";
-        // println!("{:x?}", first.as_bytes());
-        // println!("{:x?}", second.as_bytes());
-        println!("{:x?}", third.as_bytes());
-        let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
 
+        let sk = PrivateKey::from_seed(&seed).unwrap().secret_key;
         let signature1 = Signature::sign_buffer(first.as_bytes(), &sk).to_hex();
         let signature2 = Signature::sign_buffer(second.as_bytes(), &sk).to_hex();
         let signature3 = Signature::sign_buffer(third.as_bytes(), &sk).to_hex();
 
-        // assert_eq!(signature1, "2064a9039a0e8c5af90b8d1918451f4303a628ce2887e997a16d61efed928e88a11267f9fc1ecf91fc09c73ed9ca7f542887f08cb54c2efce56e243bebb0833a17");
-        // assert_eq!(signature2, "20752063fafc29b593802687dd6b6b718a932212e7465d044b99a502dcc9fa083a1fd195d943d5002ea8cdc32a3e20e160b8c5af1ec7a6f6a1101193aa68405842");
-        assert_eq!(signature3, "1f2a7505b0a536a43b04213dc5de560aa52423616f3af7735a6e12352e5acd522609ee667c2f3de9cddf1deaf884be6df40ff815cfca106cc67b7b916649c01400");
+        assert_eq!(signature1, "2064a9039a0e8c5af90b8d1918451f4303a628ce2887e997a16d61efed928e88a11267f9fc1ecf91fc09c73ed9ca7f542887f08cb54c2efce56e243bebb0833a17");
+        assert_eq!(signature2, "20752063fafc29b593802687dd6b6b718a932212e7465d044b99a502dcc9fa083a1fd195d943d5002ea8cdc32a3e20e160b8c5af1ec7a6f6a1101193aa68405842");
+        assert_eq!(signature3, "1f4dfdb566e1b18a3773800cf0c30b44ec56565ead99d7034385e7792d8ed24bc652b256cdb573ed3c3074a79a876e4f5a1cafff3fdd53061b02e0fba70634decc");
     }
 
     #[test]
@@ -125,6 +151,81 @@ mod tests {
         let bg = BigInt::from_dec_str(origin_num).unwrap();
         // bg.add(2);
         assert_eq!(bg.to_string(), "255");
+    }
+
+    #[test]
+    // fn aes() {
+    //     let seed = "hereisthefirststring";
+    //     let aes = Aes::from_seed(Some(&seed));
+    //     assert_eq!("", "2");
+    // }
+    #[test]
+    fn decode_memo() {
+        let msg = "dbc904d761774ffe3d5acaed8a50a3fa4cc82a29f5330a02e75e2b71a284a275939d3eea4de1a5adb03041af026e1848db85e663b495a74814b55053baf0d1ed";
+        let nonce = 395460150602219;
+        let seed = "ldw-formatownerqwer1234qwer1234";
+        let pubkey = "7bAJvGEX9xbEEuE4ho8zaac1vppbGYVxhaP4Lebu3DKuo2FTmb";
+        let memo = crate::memo::Memo {
+            from: String::from(""),
+            to: String::from(""),
+            nonce,
+            message: String::from(msg),
+        };
+
+        println!(
+            "Priv: {}",
+            &PrivateKey::from_seed(&seed)
+                .unwrap()
+                .public_key
+                .to_string(Some("CYB"))
+        );
+        assert_eq!(
+            memo.get_message(&PrivateKey::from_seed(&seed).unwrap(), pubkey),
+            ""
+        );
+    }
+    #[test]
+    fn encode_memo() {
+        let msg = "hereisa test message!@#$%";
+        let msg2 = "hereis the second2 test message!@#$%";
+        let msg3 = "hereis the third test message!@#$%";
+        let msg4 = "hereis the forth test message!@#$%";
+        let nonce = 395460150602219u64;
+        let seed = "ldw-formatownerqwer1234qwer1234";
+        let pubkey = "7bAJvGEX9xbEEuE4ho8zaac1vppbGYVxhaP4Lebu3DKuo2FTmb";
+        
+        let cipher1 = crate::memo::Memo::encrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &PublicKey::from_string(&pubkey, None),
+            &String::from(msg),
+            nonce,
+        );
+        let cipher2 = crate::memo::Memo::encrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &PublicKey::from_string(&pubkey, None),
+            &String::from(msg2),
+            nonce,
+        );
+        let cipher3 = crate::memo::Memo::encrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &PublicKey::from_string(&pubkey, None),
+            &String::from(msg3),
+            nonce,
+        );
+        let cipher4 = crate::memo::Memo::encrypt_message(
+            &PrivateKey::from_seed(&seed).unwrap(),
+            &PublicKey::from_string(&pubkey, None),
+            &String::from(msg4),
+            nonce,
+        );
+
+        assert_eq!(
+            *hex_d_hex::lower_hex(&cipher1),
+            "8421e6582e1fa5bf0b42b8aaa54a6ee231aa5015f5dbf9ebf79e52582ce17d9f"
+        );
+        assert_eq!(*hex_d_hex::lower_hex(&cipher2), "37f0592465cc5f241f6e720468eb4eef9301475b33aac3c3fe3d103656704006adaeeef1b65cd8bd37b22d507a100852");
+        assert_eq!(*hex_d_hex::lower_hex(&cipher3), "67a2a29a0ea612a25d7f3bf9895ca5755fc417f0398249f8ae98c274ff1e8ddf649c26fe95bbcf83f844fdc68adcc976");
+        assert_eq!(*hex_d_hex::lower_hex(&cipher4), "92a0d5cb6d70708f94b55766a77ac7c9cce6c0d63513bd8bcc3a0968c90dbe20c177d3a72f6dd9e4b52549b3f20491a9");
     }
 
     #[test]

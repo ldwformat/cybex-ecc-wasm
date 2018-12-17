@@ -1,13 +1,9 @@
-extern crate base58;
-extern crate bigint;
-extern crate secp256k1;
-extern crate sha2;
-
-use self::base58::ToBase58;
-use self::secp256k1::SecretKey;
-use self::sha2::{Digest, Sha256};
+use base58::ToBase58;
 use bigint::U256 as BigInt;
-use public_key::PublicKey;
+use secp256k1::SecretKey;
+use sha2::{Digest, Sha256, Sha512};
+
+use crate::public_key::PublicKey;
 
 #[derive(Clone, Debug)]
 pub struct PrivateKey {
@@ -18,12 +14,10 @@ pub struct PrivateKey {
 
 impl PrivateKey {
   pub fn new(d: BigInt) -> PrivateKey {
-    // let secp = Secp256k1::new();
     let mut buf: [u8; 32] = [0; 32];
     d.to_big_endian(&mut buf);
     let secret_key = SecretKey::parse_slice(&buf).unwrap();
     let public_key = PublicKey::from_secret(&secret_key);
-    // println!("D: {:?}", buf);
     PrivateKey {
       d,
       secret_key,
@@ -34,7 +28,6 @@ impl PrivateKey {
   pub fn from_seed(seed: &str) -> Result<PrivateKey, &'static str> {
     let mut sha2 = Sha256::new();
     sha2.input(seed.as_bytes());
-    // sha2.input_str(seed);
     let mut seed_vec: [u8; 32] = [0; 32];
     seed_vec.copy_from_slice(&sha2.result()[..]);
     PrivateKey::from_buffer(&seed_vec)
@@ -47,7 +40,6 @@ impl PrivateKey {
     if buffer.len() == 0 {
       return Err("Empty buffer");
     }
-    // println!("Big: {:?}", BigInt::from(buffer));
     Ok(PrivateKey::new(BigInt::from(buffer)))
   }
 
@@ -73,5 +65,11 @@ impl PrivateKey {
     buf.iter().cloned().collect()
   }
 
-  // pub fn toPublicKeyPoint(&self)
+  pub fn get_shared_secret(&self, other: &PublicKey) -> Vec<u8> {
+    let mut pub_data = other.q.clone();
+    pub_data.tweak_mul_assign(&self.secret_key).unwrap();
+    let mut sha = Sha512::new();
+    sha.input(&pub_data.serialize_compressed()[1..]);
+    sha.result()[..].iter().cloned().collect()
+  }
 }

@@ -1,18 +1,19 @@
-#![no_std]
-extern crate bigint;
-extern crate hex_d_hex;
+#![deny(
+  unused_import_braces,
+  unused_imports,
+  unused_comparisons,
+  unused_must_use,
+  unused_variables,
+  non_shorthand_field_patterns,
+  unreachable_code,
+  unused_parens
+)]
 
-extern crate secp256k1;
-extern crate sha2;
-use ecdsa;
-// #[macro_use]
-// extern crate arrayref;
+use bigint::U256 as BigInt;
+use secp256k1::{Message, RecoveryId, SecretKey, Signature as Signer};
+use sha2::{Digest, Sha256};
 
-//
-// use std::convert::TryInto;
-use self::bigint::U256 as BigInt;
-use self::secp256k1::{sign, Message, RecoveryId, SecretKey, Signature as Signer};
-use self::sha2::{Digest, Sha256};
+use crate::ecdsa;
 
 #[derive(Clone, Debug)]
 pub struct Signature {
@@ -75,7 +76,7 @@ impl Signature {
     encoder.input(&buffer);
     // encoder.result(&mut buffer_sha2);
     buffer_sha2.copy_from_slice(&encoder.result().as_slice());
-    let mut signature: Signature;
+    let signature: Signature;
     let mut counter = 0;
     loop {
       let (ecsignature, _i) = Signature::ecsign(&buffer_sha2, &sk, &counter);

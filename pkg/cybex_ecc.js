@@ -41,6 +41,12 @@ function getUint32Memory() {
     return cachegetUint32Memory;
 }
 
+function passArray8ToWasm(arg) {
+    const ptr = wasm.__wbindgen_malloc(arg.length * 1);
+    getUint8Memory().set(arg, ptr / 1);
+    return [ptr, arg.length];
+}
+
 function freeEcc(ptr) {
 
     wasm.__wbg_ecc_free(ptr);
@@ -86,6 +92,30 @@ export class Ecc {
         const retptr = globalArgumentPtr();
         try {
             wasm.ecc_sign_hex(retptr, this.ptr, ptr0, len0);
+            const mem = getUint32Memory();
+            const rustptr = mem[retptr / 4];
+            const rustlen = mem[retptr / 4 + 1];
+
+            const realRet = getStringFromWasm(rustptr, rustlen).slice();
+            wasm.__wbindgen_free(rustptr, rustlen * 1);
+            return realRet;
+
+
+        } finally {
+            wasm.__wbindgen_free(ptr0, len0 * 1);
+
+        }
+
+    }
+    /**
+    * @param {Uint8Array} arg0
+    * @returns {string}
+    */
+    sign_buffer(arg0) {
+        const [ptr0, len0] = passArray8ToWasm(arg0);
+        const retptr = globalArgumentPtr();
+        try {
+            wasm.ecc_sign_buffer(retptr, this.ptr, ptr0, len0);
             const mem = getUint32Memory();
             const rustptr = mem[retptr / 4];
             const rustlen = mem[retptr / 4 + 1];
