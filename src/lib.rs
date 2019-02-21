@@ -18,16 +18,32 @@ pub struct Ecc {
 
 #[wasm_bindgen]
 impl Ecc {
-    pub fn new(seed: &str) -> Ecc {
+    pub fn from_seed(seed: &str) -> Ecc {
         let private_key = private_key::PrivateKey::from_seed(&seed).unwrap();
         Ecc { private_key }
+    }
+
+    pub fn from_buffer(buf: &[u8]) -> Ecc {
+        let private_key = private_key::PrivateKey::from_buffer(&buf).unwrap();
+        Ecc { private_key }
+    }
+
+    pub fn to_wif(&self) -> String {
+        self.private_key.to_wif()
+    }
+
+    pub fn to_public_str(&self, prefix: &str) -> String {
+        self.private_key.public_key.to_string(Some(prefix))
     }
 
     pub fn sign_hex(&self, hex: &str) -> String {
         signature::Signature::sign_hex(hex, &self.private_key.secret_key).to_hex()
     }
 
-    pub fn sign_buffer(&self, buffer: &[u8]) -> String {
+    pub fn sign_buffer(&self, buffer: &[u8]) -> Vec<u8> {
+        signature::Signature::sign_buffer(buffer, &self.private_key.secret_key).to_buffer()
+    }
+    pub fn sign_buffer_to_hex(&self, buffer: &[u8]) -> String {
         signature::Signature::sign_buffer(buffer, &self.private_key.secret_key).to_hex()
     }
 
